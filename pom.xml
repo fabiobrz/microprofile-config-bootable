@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.example</groupId>
+  <artifactId>microprofile-config-bootable</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>war</packaging>
+
+  <name>microprofile-config Maven Webapp</name>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <failOnMissingWebXml>false</failOnMissingWebXml>
+
+    <!-- WildFly/Bootable JAR props-->
+    <version.wildfly>22.0.0.Final</version.wildfly>
+    <version.microprofile.bom>${version.wildfly}</version.microprofile.bom>
+    <version.server.bom>${version.wildfly}</version.server.bom>
+    <plugin.fork.embedded>true</plugin.fork.embedded>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Importing the microprofile BOM adds MicroProfile specs -->
+      <dependency>
+        <groupId>org.wildfly.bom</groupId>
+        <artifactId>wildfly-microprofile</artifactId>
+        <version>${version.microprofile.bom}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <!-- Add the MicroProfile Config API. Set provided for the <scope> tag, as the API is included in the server. -->
+    <dependency>
+      <groupId>org.eclipse.microprofile.config</groupId>
+      <artifactId>microprofile-config-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <!-- Add the JAX-RS API. Set provided for the <scope> tag, as the API is included in the server. -->
+    <dependency>
+      <groupId>org.jboss.spec.javax.ws.rs</groupId>
+      <artifactId>jboss-jaxrs-api_2.1_spec</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <!-- Add the CDI API. Set provided for the <scope> tag, as the API is included in the server. -->
+    <dependency>
+      <groupId>jakarta.enterprise</groupId>
+      <artifactId>jakarta.enterprise.cdi-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>microprofile-config</finalName>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.wildfly.plugins</groupId>
+          <artifactId>wildfly-jar-maven-plugin</artifactId>
+          <version>2.0.2.Final</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-clean-plugin</artifactId>
+          <version>3.1.0</version>
+        </plugin>
+        <!-- see http://maven.apache.org/ref/current/maven-core/default-bindings.html#Plugin_bindings_for_war_packaging -->
+        <plugin>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>3.0.2</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.8.0</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>2.22.1</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-war-plugin</artifactId>
+          <version>3.2.2</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-install-plugin</artifactId>
+          <version>2.5.2</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <version>2.8.2</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+  <profiles>
+    <profile>
+      <!-- A Full bootable JAR -->
+      <id>full-bootable</id>
+      <build>
+          <plugins>
+            <plugin>
+              <groupId>org.wildfly.plugins</groupId>
+              <artifactId>wildfly-jar-maven-plugin</artifactId>
+              <configuration>
+                <feature-pack-location>wildfly@maven(org.jboss.universe:community-universe)#${version.wildfly}</feature-pack-location>
+                <layers>
+                  <layer>jaxrs</layer>
+                  <layer>observability</layer>
+                </layers>
+                <excluded-layers>
+                  <layer>deployment-scanner</layer>
+                </excluded-layers>
+                <plugin-options>
+                  <jboss-fork-embedded>${plugin.fork.embedded}</jboss-fork-embedded>
+                </plugin-options>
+              </configuration>
+              <executions>
+                <execution>
+                  <goals>
+                    <goal>package</goal>
+                  </goals>
+                </execution>
+              </executions>
+            </plugin>
+          </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <!-- A Hollow bootable JAR that is used for running tests against an Arquillian deployment... -->
+      <id>hollow-bootable</id>
+      <properties>
+        <version.junit>4.13.1</version.junit>
+        <version.org.wildfly.arquillian>3.0.0.Final</version.org.wildfly.arquillian>
+        <version.org.jboss.arquillian.junit>1.6.0.Final</version.org.jboss.arquillian.junit>
+        <version.org.jboss.shrinkwrap.shrinkwrap>1.2.6</version.org.jboss.shrinkwrap.shrinkwrap>
+      </properties>
+      <dependencyManagement>
+        <!-- ... with dependencies for testing -->
+        <dependencies>
+          <dependency>
+            <groupId>org.wildfly.arquillian</groupId>
+            <artifactId>wildfly-arquillian-container-bootable</artifactId>
+            <version>${version.org.wildfly.arquillian}</version>
+            <scope>test</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.jboss.arquillian.junit</groupId>
+            <artifactId>arquillian-junit-container</artifactId>
+            <version>${version.org.jboss.arquillian.junit}</version>
+            <scope>test</scope>
+          </dependency>
+          <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${version.junit}</version>
+            <scope>test</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.jboss.shrinkwrap</groupId>
+            <artifactId>shrinkwrap-api</artifactId>
+            <version>${version.org.jboss.shrinkwrap.shrinkwrap}</version>
+            <scope>test</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.jboss.shrinkwrap</groupId>
+            <artifactId>shrinkwrap-impl-base</artifactId>
+            <version>${version.org.jboss.shrinkwrap.shrinkwrap}</version>
+            <scope>test</scope>
+          </dependency>
+        </dependencies>
+      </dependencyManagement>
+      <dependencies>
+        <dependency>
+          <groupId>io.rest-assured</groupId>
+          <artifactId>rest-assured</artifactId>
+          <version>4.3.3</version>
+        </dependency>
+        <dependency>
+          <groupId>org.wildfly.arquillian</groupId>
+          <artifactId>wildfly-arquillian-container-bootable</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.jboss.arquillian.junit</groupId>
+          <artifactId>arquillian-junit-container</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>junit</groupId>
+          <artifactId>junit</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.jboss.shrinkwrap</groupId>
+          <artifactId>shrinkwrap-api</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.jboss.shrinkwrap</groupId>
+          <artifactId>shrinkwrap-impl-base</artifactId>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.wildfly.plugins</groupId>
+            <artifactId>wildfly-jar-maven-plugin</artifactId>
+            <configuration>
+              <feature-pack-location>wildfly@maven(org.jboss.universe:community-universe)#${version.wildfly}</feature-pack-location>
+              <layers>
+                <layer>jaxrs</layer>
+                <layer>observability</layer>
+              </layers>
+              <excluded-layers>
+                <layer>deployment-scanner</layer>
+              </excluded-layers>
+              <plugin-options>
+                <jboss-fork-embedded>${plugin.fork.embedded}</jboss-fork-embedded>
+              </plugin-options>
+              <hollow-jar>true</hollow-jar>
+            </configuration>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>package</goal>
+                </goals>
+                <phase>process-test-resources</phase>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>default-test</id>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+                <phase>test</phase>
+                <configuration>
+                  <!-- Surefire is setting system properties that will be used by Arquillian -->
+                  <systemPropertyVariables>
+                    <jboss.args/>
+                    <server.jvm.args/>
+                    <install.dir>${project.build.directory}/bootable</install.dir>
+                    <bootable.jar>${project.build.directory}/microprofile-config-bootable.jar</bootable.jar>
+                    <arquillian.xml>arquillian-bootable.xml</arquillian.xml>
+                  </systemPropertyVariables>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>
